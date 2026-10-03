@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diagnóstico inicial BUAP — Arquitectura</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#F2F5FA; --surface:#FFFFFF; --surface2:#F7F9FD; --ink:#10203A; --muted:#55637B; --line:#D7DFEC;
+  --accent:#2848D9; --accent-ink:#FFFFFF; --accent-soft:#E5EBFF;
+  --good:#0B7A59; --good-soft:#DDF4EA; --warn:#8F5600; --warn-soft:#FFEFCF; --warn-bar:#E9A11A;
+  --bad:#B5222D; --bad-soft:#FCE3E5; --shadow:0 1px 2px rgba(16,32,58,.06),0 8px 24px rgba(16,32,58,.06);
+  --grid:rgba(40,72,217,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1526; --surface:#15203A; --surface2:#1A2745; --ink:#E9EEF9; --muted:#9CAAC4; --line:#2A3A5C;
+    --accent:#7C97FF; --accent-ink:#0D1526; --accent-soft:#1F2F5E;
+    --good:#4FD1A3; --good-soft:#123A30; --warn:#F2B44D; --warn-soft:#3A2C0F; --warn-bar:#E9A11A;
+    --bad:#FF8A93; --bad-soft:#421B22; --shadow:0 1px 2px rgba(0,0,0,.4); --grid:rgba(124,151,255,.08);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1526; --surface:#15203A; --surface2:#1A2745; --ink:#E9EEF9; --muted:#9CAAC4; --line:#2A3A5C;
+  --accent:#7C97FF; --accent-ink:#0D1526; --accent-soft:#1F2F5E;
+  --good:#4FD1A3; --good-soft:#123A30; --warn:#F2B44D; --warn-soft:#3A2C0F; --warn-bar:#E9A11A;
+  --bad:#FF8A93; --bad-soft:#421B22; --shadow:0 1px 2px rgba(0,0,0,.4); --grid:rgba(124,151,255,.08);
+}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 96px)}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px;line-height:1.55;-webkit-text-size-adjust:100%}
+h1,h2,h3,h4{font-family:"Bricolage Grotesque","Figtree",system-ui,sans-serif;line-height:1.15;margin:0;letter-spacing:-.01em}
+p{margin:0 0 .8em}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible,a:focus-visible,.opt:has(input:focus-visible),.cf:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px}
+
+/* ---------- botones ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);padding:12px 20px;border-radius:12px;font-weight:600;min-height:48px;transition:background .15s,border-color .15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.small{min-height:40px;padding:8px 14px;font-size:15px;border-radius:10px}
+.btn.ghost{background:transparent}
+
+/* ---------- intro ---------- */
+.hero{background:var(--surface);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px;border-bottom:1.5px solid var(--line)}
+.hero .wrap{padding-top:44px;padding-bottom:40px}
+.hero h1{font-size:clamp(30px,5.4vw,52px);font-weight:700;max-width:16ch}
+.hero .sub{margin-top:14px;font-size:clamp(16px,2.2vw,20px);color:var(--muted);max-width:52ch;font-weight:500}
+.tag{display:inline-block;margin-top:18px;padding:6px 12px;border:1.5px dashed var(--muted);border-radius:8px;font-size:14px;color:var(--muted);font-weight:600}
+.intro-grid{display:grid;gap:22px;padding-top:26px;padding-bottom:60px}
+@media(min-width:900px){.intro-grid{grid-template-columns:1.1fr .9fr;align-items:start}}
+.card{background:var(--surface);border:1.5px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow)}
+.card h2{font-size:24px;margin-bottom:14px}
+.card h3{font-size:19px;margin-bottom:10px}
+.letter p{font-size:17px}
+.letter ul{margin:.2em 0 1em;padding-left:1.2em}
+.letter .lead{font-family:"Bricolage Grotesque",sans-serif;font-size:21px;font-weight:600;line-height:1.3}
+.rules{background:var(--surface2);border-left:5px solid var(--accent);padding:12px 16px;border-radius:0 12px 12px 0;margin:1em 0}
+.rules p{margin:0}
+.field{display:block;margin-bottom:16px}
+.field span{display:block;font-weight:700;margin-bottom:6px;font-size:15px}
+.field small{color:var(--muted);font-weight:500}
+.field input,.field textarea{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface2);color:var(--ink);font:inherit}
+.field textarea{min-height:84px;resize:vertical}
+.meta-list{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:8px;font-size:15px;color:var(--muted)}
+.meta-list li::before{content:"";display:inline-block;width:8px;height:8px;background:var(--accent);margin-right:10px;border-radius:2px}
+
+/* ---------- examen ---------- */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1.5px solid var(--line)}
+.topbar .wrap{padding-top:10px;padding-bottom:10px}
+.toprow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:16px}
+.brand small{display:block;font-family:"Figtree",sans-serif;font-weight:500;color:var(--muted);font-size:13px}
+.clock{font-variant-numeric:tabular-nums;font-weight:700;font-size:20px;text-align:right;line-height:1.1}
+.clock small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
+.ruler{display:flex;gap:2px;align-items:flex-end;height:16px;margin-top:9px}
+.ruler i{flex:1;height:8px;background:var(--line);border-radius:1px}
+.ruler i:nth-child(10n){margin-right:4px}
+.ruler i.done{background:var(--accent)}
+.ruler i.flag{background:var(--warn-bar)}
+.ruler i.cur{height:16px;background:var(--ink)}
+.rulermeta{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:4px}
+.stage{padding-top:20px;padding-bottom:130px}
+.qwrap{display:grid;gap:18px}
+@media(min-width:980px){.qwrap.two{grid-template-columns:1fr 1fr;align-items:start}.qwrap.two .passage{position:sticky;top:calc(env(safe-area-inset-top,0px) + 120px);max-height:calc(100vh - 260px);overflow:auto}}
+@media(min-width:980px){.qwrap:not(.two){max-width:760px;margin:0 auto}}
+.passage{background:var(--surface);border:1.5px solid var(--line);border-left:6px solid var(--accent);border-radius:14px;padding:18px 20px}
+.passage h3{font-size:17px;margin-bottom:10px;color:var(--accent)}
+.passage p{font-size:17px;line-height:1.65}
+.passage ul{margin:.2em 0 .9em;padding-left:1.2em}
+.passage .ttl{font-weight:800;letter-spacing:.02em}
+.qcard{background:var(--surface);border:1.5px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.qhead h2{font-size:26px}
+.flagbtn{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--surface2);border-radius:999px;padding:8px 14px;font-weight:600;font-size:15px;min-height:42px}
+.flagbtn[aria-pressed="true"]{background:var(--warn-soft);border-color:var(--warn-bar);color:var(--warn)}
+.prompt{white-space:pre-line;font-size:19px;line-height:1.5;margin-bottom:18px}
+fieldset{border:0;margin:0;padding:0;min-width:0}
+.opts{display:grid;gap:10px}
+.opt{display:flex;gap:14px;align-items:flex-start;border:1.5px solid var(--line);background:var(--surface2);border-radius:14px;padding:14px 16px;cursor:pointer;transition:border-color .12s,background .12s;min-height:56px}
+.opt:hover{border-color:var(--accent)}
+.opt input{position:absolute;opacity:0;width:1px;height:1px}
+.opt .ltr{flex:0 0 34px;height:34px;border-radius:9px;border:1.5px solid var(--muted);display:grid;place-items:center;font-weight:800;font-family:"Bricolage Grotesque",sans-serif}
+.opt .otxt{padding-top:3px;font-size:17px}
+.opt.on{border-color:var(--accent);background:var(--accent-soft)}
+.opt.on .ltr{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.conf{margin-top:22px}
+.conf h3{font-size:17px;margin-bottom:10px;font-family:"Figtree",sans-serif;font-weight:700}
+.confrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cf{border:1.5px solid var(--line);background:var(--surface2);border-radius:12px;padding:12px 8px;text-align:center;font-weight:700;cursor:pointer;min-height:50px;display:grid;place-items:center}
+.cf input{position:absolute;opacity:0;width:1px;height:1px}
+.cf:hover{border-color:var(--accent)}
+.cf.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.navbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1.5px solid var(--line);z-index:20;padding-bottom:env(safe-area-inset-bottom,0px)}
+.navbar .wrap{display:flex;gap:10px;align-items:center;justify-content:space-between;padding-top:10px;padding-bottom:10px}
+.navhint{font-size:14px;color:var(--muted);text-align:center;flex:1}
+.navhint.ok{color:var(--good)}
+@media(max-width:560px){.navhint{display:none}.navbar .btn{flex:1}.qcard{padding:16px}.prompt{font-size:18px}}
+
+/* ---------- revisión ---------- */
+.review h1{font-size:clamp(26px,4vw,38px);margin-bottom:8px}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+.stat{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px 18px;min-width:130px}
+.stat b{display:block;font-size:26px;font-family:"Bricolage Grotesque",sans-serif}
+.stat span{font-size:14px;color:var(--muted)}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:8px;margin:14px 0 22px}
+.qg{position:relative;height:52px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);font-weight:700;font-variant-numeric:tabular-nums}
+.qg.done{background:var(--accent-soft);border-color:var(--accent)}
+.qg.half{background:var(--bad-soft);border-color:var(--bad)}
+.qg.flag::after{content:"";position:absolute;top:5px;right:5px;width:10px;height:10px;border-radius:50%;background:var(--warn-bar)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1.5px solid var(--line);vertical-align:-2px;margin-right:6px}
+.legend .l1{background:var(--accent-soft);border-color:var(--accent)}
+.legend .l2{background:var(--bad-soft);border-color:var(--bad)}
+.legend .l3{background:var(--surface)}
+.legend .l4{background:var(--warn-bar);border-radius:50%}
+
+/* ---------- modal / toast ---------- */
+.overlay{position:fixed;inset:0;background:rgba(8,16,32,.6);display:grid;place-items:center;padding:18px;z-index:50}
+.modal{background:var(--surface);border-radius:18px;max-width:460px;width:100%;padding:24px;border:1.5px solid var(--line)}
+.modal h3{font-size:22px;margin-bottom:10px}
+.modal .row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:12px 18px;border-radius:12px;font-weight:600;z-index:60;max-width:92vw;text-align:center}
+
+/* ---------- resultados ---------- */
+.resnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1.5px solid var(--line)}
+.resnav .wrap{display:flex;gap:6px;overflow-x:auto;padding-top:8px;padding-bottom:8px}
+.resnav a{white-space:nowrap;text-decoration:none;color:var(--ink);font-weight:600;font-size:15px;padding:8px 14px;border-radius:999px;border:1.5px solid transparent}
+.resnav a:hover{border-color:var(--line);background:var(--surface2)}
+.rhero{background:var(--surface);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px;border-bottom:1.5px solid var(--line)}
+.rhero .wrap{padding-top:34px;padding-bottom:30px}
+.who{color:var(--muted);font-weight:600;font-size:16px}
+.rhero h1{font-size:clamp(28px,4.6vw,44px);margin:4px 0 20px}
+.scoreline{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+.big{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:16px 20px}
+.big b{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:44px;line-height:1}
+.big b small{font-size:22px;color:var(--muted);font-weight:600}
+.big span{display:block;margin-top:8px;color:var(--muted);font-size:15px}
+.notice{margin-top:18px;padding:12px 16px;border-radius:12px;background:var(--surface2);border:1.5px dashed var(--muted);font-size:15px;color:var(--muted)}
+section.blk{padding-top:36px}
+section.blk>h2{font-size:clamp(24px,3.4vw,32px);margin-bottom:6px}
+section.blk>.lede{color:var(--muted);margin-bottom:18px;max-width:70ch}
+.arow{display:grid;grid-template-columns:minmax(150px,240px) 1fr auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1.5px solid var(--line)}
+.arow:last-child{border-bottom:0}
+.arow .nm{font-weight:700}
+.arow .nm small{display:block;font-weight:500;color:var(--muted);font-size:14px}
+.bar{height:18px;background:var(--surface2);border:1.5px solid var(--line);border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%}
+.c-bad{background:var(--bad)}.c-warn{background:var(--warn-bar)}.c-mid{background:var(--accent)}.c-good{background:var(--good)}
+.arow .val{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;min-width:120px}
+.arow .val small{display:block;font-weight:600;color:var(--muted);font-size:13px}
+@media(max-width:640px){.arow{grid-template-columns:1fr auto}.arow .bar{grid-column:1/-1;order:3}}
+.chip{display:inline-block;padding:3px 10px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.mid{background:var(--accent-soft);color:var(--accent)}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.chip.neutral{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+.prio{border:1.5px solid var(--line);border-left-width:8px;border-radius:14px;background:var(--surface);padding:18px 20px;margin-bottom:14px}
+.prio.p1{border-left-color:var(--bad)}.prio.p2{border-left-color:var(--warn-bar)}.prio.p3{border-left-color:var(--accent)}.prio.pf{border-left-color:var(--good)}
+.prio h3{font-size:21px;margin-bottom:10px}
+.prio ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.prio li b{display:block}
+.prio li span{color:var(--muted);font-size:15px}
+.tablewrap{overflow-x:auto;border:1.5px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--surface2);font-size:14px;position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.mx{display:grid;grid-template-columns:auto repeat(3,1fr);gap:8px;max-width:560px;margin:14px 0 6px}
+.mx div{padding:12px;border-radius:12px;background:var(--surface);border:1.5px solid var(--line);text-align:center;font-weight:700}
+.mx .h{background:transparent;border:0;color:var(--muted);font-size:14px}
+.mx .rl{text-align:left;background:transparent;border:0;color:var(--muted);font-size:14px;align-self:center}
+.mx .k{font-size:28px;font-family:"Bricolage Grotesque",sans-serif}
+.mx .k.b{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.mx .k.w{background:var(--warn-soft);border-color:var(--warn-bar);color:var(--warn)}
+.mx .k.g{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.trio{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-top:18px}
+.trio .t{background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px}
+.trio .t b{font-size:30px;font-family:"Bricolage Grotesque",sans-serif;display:block}
+.trio .t p{margin:6px 0 0;font-size:15px;color:var(--muted)}
+.trio .t .ids{margin-top:8px;font-size:14px;color:var(--ink);font-weight:600;word-break:break-word}
+details.rv{border:1.5px solid var(--line);border-radius:14px;background:var(--surface);margin-bottom:10px;overflow:hidden}
+details.rv>summary{list-style:none;cursor:pointer;padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;min-height:52px}
+details.rv>summary::-webkit-details-marker{display:none}
+details.rv>summary::before{content:"";width:10px;height:10px;border-right:2.5px solid var(--muted);border-bottom:2.5px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;flex:none}
+details.rv[open]>summary::before{transform:rotate(45deg)}
+.rid{font-weight:800;font-family:"Bricolage Grotesque",sans-serif;font-size:18px}
+.rsub{color:var(--muted);font-size:15px;flex:1;min-width:120px}
+.rbody{padding:4px 18px 18px;border-top:1.5px solid var(--line)}
+.rbody .ptxt{white-space:pre-line;margin:14px 0}
+.ans{display:grid;gap:8px;margin:10px 0}
+.ans div{padding:10px 14px;border-radius:10px;border:1.5px solid var(--line);font-size:16px}
+.ans .st{background:var(--bad-soft);border-color:var(--bad)}
+.ans .st.okk{background:var(--good-soft);border-color:var(--good)}
+.ans .ck{background:var(--good-soft);border-color:var(--good)}
+.ans b{font-weight:800}
+.expl{background:var(--surface2);border-radius:10px;padding:10px 14px;font-size:16px}
+.rmeta{font-size:14px;color:var(--muted);margin-top:8px}
+.rbody details{margin-top:10px}
+.rbody details summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:15px}
+.rbody details .passage{margin-top:8px}
+.catlabel{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:22px 0 10px}
+.catlabel h3{font-size:20px}
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
+pre.rep{white-space:pre-wrap;word-break:break-word;background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:16px;font-size:13.5px;line-height:1.5;max-height:420px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.foot{padding:40px 0 70px;color:var(--muted);font-size:14px}
+@media print{.resnav,.actions,.navbar,.foot .btn{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const SEC = {
+  CE: "Ciencias Experimentales",
+  IE: "Ingenierías y Ciencias Exactas",
+  CL: "Comprensión lectora",
+  RI: "Redacción indirecta",
+  PM: "Pensamiento matemático",
+  HB: "Habilidades blandas y toma de decisiones"
+};
+const SEC_ORDER = ["CE", "IE", "CL", "RI", "PM", "HB"];
+
+const PASSAGES = {
+  A: {
+    title: "Texto A",
+    ids: ["CL01", "CL02", "CL03", "CL04", "CL05"],
+    paras: [
+      `En el diseño urbano, contar árboles no basta para estimar la calidad de la sombra. Dos plazas con veinte árboles pueden comportarse de manera muy distinta. Si en una los ejemplares son jóvenes, están concentrados en un borde y carecen de riego suficiente, gran parte del pavimento seguirá expuesto durante las horas de mayor radiación. En otra, árboles de copas amplias distribuidos junto a recorridos y zonas de estancia pueden proteger mejor a los usuarios.`,
+      `Por eso, evaluar el confort térmico exige observar la ubicación, la cobertura de copa, los materiales del suelo y la disponibilidad de agua, además del número de árboles. Esto no significa que plantar carezca de valor. Significa que la plantación debe formar parte de una estrategia de diseño y mantenimiento. Una intervención que sólo cumple una meta numérica puede verse bien en un informe y, sin embargo, ofrecer poca sombra donde las personas realmente caminan o esperan.`
+    ]
+  },
+  B: {
+    title: "Texto B",
+    ids: ["CL06", "CL07", "CL08", "CL09", "CL10"],
+    paras: [
+      `Tomás regresó al estudio de su abuelo para vaciarlo antes de vender la casa. Sobre la mesa encontró reglas de madera, papeles amarillentos y un tubo con planos. Pensó en guardarlos sin abrir, como quien archiva una historia terminada.`,
+      `Al mover una escuadra cayó una hoja pequeña. Tenía una frase escrita a lápiz: "Una casa nunca está terminada mientras alguien pueda imaginar otra forma de habitarla".`,
+      `Tomás desenrolló los planos. No intentó copiarlos. Colocó encima una hoja transparente y empezó a dibujar una rampa donde antes había tres escalones, una ventana más ancha y un patio abierto.`,
+      `Cuando oscureció, levantó la persiana que llevaba años cerrada. Entró aire, los papeles temblaron y, por primera vez en mucho tiempo, la casa pareció respirar.`
+    ]
+  },
+  C: {
+    title: "Texto C — Noticia",
+    ids: ["CL11", "CL12", "CL13"],
+    paras: [
+      `San Pedro del Valle, 12 de octubre.— El ayuntamiento inició este lunes una prueba de ocho semanas en la calle Norte. Entre las 7:00 y las 21:00 horas, el tramo central permanecerá cerrado a vehículos particulares; los servicios de emergencia conservarán el acceso.`,
+      `Durante el periodo, la Dirección de Movilidad contará peatones, registrará tiempos de traslado y entrevistará a comerciantes en las semanas 1, 4 y 8.`,
+      `Según el comunicado municipal, los resultados se publicarán al concluir la prueba y se utilizarán para decidir si el cambio se mantiene, se modifica o se cancela.`
+    ]
+  },
+  D: {
+    title: "Texto D — Aviso",
+    ids: ["CL14", "CL15"],
+    paras: [
+      `TALLER DE MAQUETAS`,
+      `Para solicitar un turno de acceso, el estudiante debe completar el registro a más tardar el 15 de octubre y adjuntar dos documentos:`,
+      `- Credencial vigente.`,
+      `- Constancia del curso de seguridad.`,
+      `Las solicitudes incompletas no recibirán horario.`,
+      `La confirmación se enviará por correo electrónico dentro de los dos días hábiles posteriores a la recepción completa.`
+    ]
+  }
+};
+
+const STUDY_GROUPS = {
+  "Química": ["CE01", "CE02", "CE03", "CE04"],
+  "Física": ["CE05", "CE06", "CE07", "CE08", "IE07", "IE08", "IE09", "IE10", "IE11", "IE12"],
+  "Biología": ["CE09", "CE10", "CE11", "CE12"],
+  "Sistemas de ecuaciones": ["IE01", "PM14"],
+  "Trigonometría": ["IE02", "IE03", "IE04"],
+  "Cálculo diferencial": ["IE05", "IE06"],
+  "Álgebra": ["PM01", "PM02", "PM11", "PM13"],
+  "Geometría, medición y escala": ["PM03", "PM06", "PM08"],
+  "Estadística y medidas de posición": ["PM04", "PM05", "PM15"],
+  "Funciones": ["PM07", "PM12"],
+  "Probabilidad": ["PM09"],
+  "Porcentajes": ["PM10"],
+  "Lectura académica/argumentativa": ["CL01", "CL02", "CL03", "CL04", "CL05"],
+  "Lectura literaria": ["CL06", "CL07", "CL08", "CL09", "CL10"],
+  "Noticia": ["CL11", "CL12", "CL13"],
+  "Documento administrativo": ["CL14", "CL15"],
+  "Registro y género": ["RI01", "RI02", "RI03", "RI15"],
+  "Concordancia": ["RI04", "RI05"],
+  "Cohesión": ["RI06", "RI07", "RI08", "RI13", "RI14"],
+  "Ortografía y puntuación": ["RI09", "RI10", "RI11", "RI12"],
+  "Pensamiento crítico": ["HB01", "HB02"],
+  "Resolución y toma de decisiones": ["HB03", "HB04"],
+  "Lógica y patrones": ["HB05", "HB06", "HB07", "HB08"],
+  "Comunicación, liderazgo y adaptabilidad": ["HB09", "HB10", "HB11"]
+};
+
+const RAW = [];
+function q(id, prompt, opts, key, area, sub, dif, expl) {
+  RAW.push({ id, prompt, opts, key, area, sub, dif, expl });
+}
+
+/* ---------- SECCIÓN 1 — CIENCIAS EXPERIMENTALES ---------- */
+q("CE01", `Un átomo de sodio tiene 11 protones. Si pierde un electrón, ¿qué tipo de partícula se forma?`,
+  [`Un anión`, `Un catión`, `Un isótopo`], "B", "Química", "Estructura atómica e iones", "Básica",
+  `perder un electrón produce carga positiva; se forma un catión.`);
+q("CE02", `¿Cuál es el nombre correcto del compuesto CaCl₂?`,
+  [`Cloruro de calcio`, `Clorato de calcio`, `Cloruro de carbono`], "A", "Química", "Lenguaje químico inorgánico", "Básica",
+  `CaCl₂ se denomina cloruro de calcio.`);
+q("CE03", `Considera la reacción balanceada:\n\n2H₂ + O₂ → 2H₂O\n\nSi reaccionan 3 mol de O₂ con suficiente H₂, ¿cuántos mol de H₂O pueden formarse?`,
+  [`2 mol`, `3 mol`, `6 mol`], "C", "Química", "Estequiometría", "Media",
+  `1 mol de O₂ produce 2 mol de H₂O; 3 producen 6.`);
+q("CE04", `El etanol tiene fórmula C₂H₅OH. ¿Qué grupo funcional permite clasificarlo como alcohol?`,
+  [`Carboxilo`, `Hidroxilo`, `Carbonilo`], "B", "Química", "Compuestos del carbono", "Básica",
+  `los alcoholes contienen el grupo hidroxilo -OH.`);
+q("CE05", `Un automóvil aumenta uniformemente su velocidad de 0 m/s a 20 m/s en 5 segundos. ¿Cuál es su aceleración?`,
+  [`4 m/s²`, `5 m/s²`, `10 m/s²`], "A", "Física", "Cinemática", "Básica",
+  `a = Δv/t = 20/5 = 4 m/s².`);
+q("CE06", `Sobre un objeto de 6 kg actúa una fuerza neta de 18 N. ¿Qué aceleración adquiere?`,
+  [`108 m/s²`, `12 m/s²`, `3 m/s²`], "C", "Física", "Dinámica", "Básica",
+  `a = F/m = 18/6 = 3 m/s².`);
+q("CE07", `Un objeto a 80 °C se pone en contacto con otro a 20 °C. Sin considerar pérdidas al ambiente, ¿qué sucede inicialmente con el calor?`,
+  [`Fluye del objeto frío al caliente.`, `Fluye del objeto caliente al frío.`, `No existe transferencia térmica.`], "B", "Física", "Termología", "Básica",
+  `el calor fluye espontáneamente del cuerpo más caliente al más frío.`);
+q("CE08", `Un resistor de 6 Ω se conecta a una diferencia de potencial de 12 V. ¿Qué corriente circula?`,
+  [`2 A`, `6 A`, `72 A`], "A", "Física", "Electricidad", "Básica",
+  `I = V/R = 12/6 = 2 A.`);
+q("CE09", `¿Qué organelo participa principalmente en la producción de ATP durante la respiración celular aerobia?`,
+  [`Lisosoma`, `Aparato de Golgi`, `Mitocondria`], "C", "Biología", "Metabolismo celular", "Básica",
+  `la mitocondria participa centralmente en la respiración aerobia y producción de ATP.`);
+q("CE10", `Después de una comida aumenta la glucosa sanguínea. ¿Qué órgano libera insulina para ayudar a regularla?`,
+  [`Hígado`, `Páncreas`, `Riñón`], "B", "Biología", "Sistemas de regulación", "Básica",
+  `las células beta del páncreas producen insulina.`);
+q("CE11", `Dos organismos heterocigotos para un carácter se cruzan:\n\nAa × Aa\n\nSi "a" es recesivo, ¿cuál es la probabilidad de obtener descendencia con genotipo aa?`,
+  [`25%`, `50%`, `75%`], "A", "Biología", "Genética mendeliana", "Media",
+  `Aa × Aa produce AA, Aa, Aa y aa; uno de cuatro es aa.`);
+q("CE12", `En una población bacteriana existe variación en resistencia a un antibiótico. Después de varias generaciones de exposición, aumentan las bacterias resistentes. ¿Qué proceso explica mejor el cambio?`,
+  [`Las bacterias decidieron adaptarse.`, `Todas desarrollaron la misma mutación necesaria.`, `La selección natural favoreció a las resistentes.`], "C", "Biología", "Evolución", "Media",
+  `la presión selectiva favorece la reproducción de individuos resistentes.`);
+
+/* ---------- SECCIÓN 2 — INGENIERÍAS Y CIENCIAS EXACTAS ---------- */
+q("IE01", `Resuelve el sistema:\n\n2x + y = 7\nx - y = 2`,
+  [`x = 2, y = 3`, `x = 3, y = 1`, `x = 4, y = -1`], "B", "Matemáticas avanzadas", "Sistemas de ecuaciones", "Media",
+  `al resolver el sistema se obtiene x = 3 y y = 1.`);
+q("IE02", `¿Cuál es el valor de sen 30°?`,
+  [`1/2`, `√2/2`, `√3/2`], "A", "Trigonometría", "Razones trigonométricas", "Básica",
+  `sen 30° = 1/2.`);
+q("IE03", `¿Cuál expresión completa correctamente la identidad?\n\nsen² θ + cos² θ = ___`,
+  [`0`, `2`, `1`], "C", "Trigonometría", "Identidades", "Media",
+  `sen²θ + cos²θ = 1.`);
+q("IE04", `En el intervalo 0° ≤ θ ≤ 90°, si:\n\nsen θ = 1/2\n\n¿cuál es el valor de θ?`,
+  [`30°`, `45°`, `60°`], "A", "Trigonometría", "Ecuaciones trigonométricas", "Media",
+  `en el primer cuadrante, sen 30° = 1/2.`);
+q("IE05", `Sea:\n\nf(x) = 3x² - 4x + 7\n\n¿Cuál es su derivada?`,
+  [`3x - 4`, `6x - 4`, `6x + 7`], "B", "Cálculo diferencial", "Derivadas", "Media",
+  `d(3x² - 4x + 7)/dx = 6x - 4.`);
+q("IE06", `Un terreno rectangular tendrá un perímetro de 40 m. ¿Cuáles dimensiones producen el área máxima?`,
+  [`5 m × 15 m`, `8 m × 12 m`, `10 m × 10 m`], "C", "Cálculo diferencial", "Optimización", "Alta",
+  `con perímetro fijo, el rectángulo de área máxima es un cuadrado de 10 × 10.`);
+q("IE07", `Una pelota se lanza horizontalmente desde una altura con velocidad inicial de 10 m/s. Si se desprecia la resistencia del aire, ¿qué ocurre con su componente horizontal de velocidad durante la caída?`,
+  [`Aumenta continuamente.`, `Permanece constante.`, `Disminuye hasta cero.`], "B", "Física aplicada", "Movimiento en dos dimensiones", "Media",
+  `sin resistencia del aire no existe aceleración horizontal.`);
+q("IE08", `Un cuerpo de 6 kg recibe una fuerza neta horizontal de 18 N. ¿Cuál es su aceleración?`,
+  [`3 m/s²`, `12 m/s²`, `108 m/s²`], "A", "Física aplicada", "Leyes de Newton", "Media",
+  `a = F/m = 18/6 = 3 m/s².`);
+q("IE09", `Una fuerza constante de 200 N desplaza un objeto 5 m en la misma dirección de la fuerza. ¿Qué trabajo realiza?`,
+  [`40 J`, `205 J`, `1 000 J`], "C", "Física aplicada", "Trabajo y energía", "Media",
+  `W = Fd = 200 × 5 = 1 000 J.`);
+q("IE10", `Dos cuerpos idénticos y del mismo material están a 80 °C y 20 °C. Se colocan en contacto dentro de un sistema térmicamente aislado. ¿Cuál será su temperatura de equilibrio?`,
+  [`50 °C`, `60 °C`, `100 °C`], "A", "Física aplicada", "Equilibrio térmico", "Media",
+  `al ser cuerpos idénticos y aislados, el equilibrio queda en el promedio: 50 °C.`);
+q("IE11", `Una fuerza de 600 N actúa perpendicularmente sobre una superficie de 0.03 m². ¿Qué presión produce?`,
+  [`1 800 Pa`, `20 000 Pa`, `200 000 Pa`], "B", "Física aplicada", "Presión", "Media",
+  `P = F/A = 600/0.03 = 20 000 Pa.`);
+q("IE12", `Dos cargas puntuales de 2 μC y 3 μC están separadas 0.30 m.\n\nUsa:\nk = 9 × 10⁹ N·m²/C²\n\n¿Cuál es aproximadamente la magnitud de la fuerza eléctrica entre ellas?`,
+  [`0.06 N`, `6 N`, `0.60 N`], "C", "Física aplicada", "Electrostática", "Alta",
+  `F = kq₁q₂/r² = 0.60 N aproximadamente.`);
+
+/* ---------- SECCIÓN 3 — COMPRENSIÓN LECTORA ---------- */
+q("CL01", `¿Cuál es la idea principal del texto?`,
+  [`La efectividad del arbolado depende de su diseño y mantenimiento, no sólo de la cantidad.`, `Los árboles jóvenes no deben utilizarse en espacios públicos.`, `Todas las plazas deberían tener exactamente veinte árboles.`], "A", "Comprensión lectora", "Idea principal", "Media",
+  `el texto sostiene que cantidad, diseño y mantenimiento deben analizarse conjuntamente.`);
+q("CL02", `Además del número de árboles, ¿qué elementos menciona explícitamente el texto para evaluar el confort térmico?`,
+  [`Precio del terreno y altura de los edificios.`, `Número de habitantes y antigüedad de la plaza.`, `Ubicación, cobertura de copa, materiales y agua.`], "C", "Comprensión lectora", "Localización de información", "Básica",
+  `esos cuatro factores aparecen explícitamente.`);
+q("CL03", `¿Qué puede inferirse de la expresión "cumple una meta numérica"?`,
+  [`Alcanzar una cifra garantiza una intervención exitosa.`, `Cumplir una cantidad establecida no garantiza un buen resultado.`, `Las metas cuantitativas nunca deben utilizarse.`], "B", "Comprensión lectora", "Inferencia", "Media",
+  `una cifra cumplida puede no resolver el problema real.`);
+q("CL04", `¿Para qué se presenta el ejemplo de las dos plazas con veinte árboles?`,
+  [`Para mostrar que una misma cantidad puede producir resultados distintos.`, `Para demostrar que veinte árboles constituyen la cantidad ideal.`, `Para probar que una plaza debe tener árboles maduros únicamente.`], "A", "Comprensión lectora", "Función de un ejemplo", "Media",
+  `las dos plazas ilustran resultados diferentes con igual cantidad de árboles.`);
+q("CL05", `¿Qué evidencia fortalecería mejor la postura del texto?`,
+  [`Fotografías de árboles de diferentes especies sin información adicional.`, `Opiniones aisladas sobre cuál plaza parece más bonita.`, `Mediciones comparables de sombra y temperatura en plazas con diferentes distribuciones de arbolado.`], "C", "Comprensión lectora", "Evaluación de evidencia", "Alta",
+  `mediciones comparables permiten evaluar directamente la afirmación.`);
+q("CL06", `¿Qué provoca principalmente que Tomás comience a dibujar?`,
+  [`La necesidad de vender rápidamente la casa.`, `La frase encontrada cambia su manera de interpretar los planos.`, `El deseo de reproducir exactamente el trabajo de su abuelo.`], "B", "Comprensión literaria", "Motivación del personaje", "Media",
+  `la nota transforma la manera en que Tomás entiende el legado.`);
+q("CL07", `¿Qué recurso literario aparece en "la casa pareció respirar"?`,
+  [`Hipérbole numérica`, `Comparación explícita`, `Personificación`], "C", "Comprensión literaria", "Figura retórica", "Básica",
+  `se atribuye a una casa una acción propia de seres vivos.`);
+q("CL08", `¿Cuál es el tema central del relato?`,
+  [`Una herencia puede mantenerse viva mediante reinterpretación y cambio.`, `Los objetos antiguos deben conservarse sin modificarse.`, `Toda construcción antigua debe ser reemplazada.`], "A", "Comprensión literaria", "Tema", "Media",
+  `el relato vincula herencia con reinterpretación y transformación.`);
+q("CL09", `¿Cuál ocurre primero?`,
+  [`Tomás dibuja una rampa.`, `Tomás encuentra la nota escrita a lápiz.`, `Tomás levanta la persiana.`], "B", "Comprensión literaria", "Secuencia narrativa", "Básica",
+  `primero encuentra la nota; después dibuja y al final abre la persiana.`);
+q("CL10", `¿Qué sugiere la frase "No intentó copiarlos"?`,
+  [`Tomás considera inútiles los planos antiguos.`, `Tomás no comprende los dibujos de su abuelo.`, `Tomás decide continuar el legado mediante una propuesta propia.`], "C", "Comprensión literaria", "Inferencia", "Media",
+  `Tomás usa el legado como punto de partida, no como modelo para copiar.`);
+q("CL11", `¿Cuánto durará la prueba?`,
+  [`Ocho semanas`, `Cuatro semanas`, `Ocho meses`], "A", "Participación social", "Localización en noticia", "Básica",
+  `el texto establece ocho semanas.`);
+q("CL12", `¿Por qué se recopilarán datos durante el periodo?`,
+  [`Para justificar obligatoriamente un cierre permanente.`, `Para evaluar los efectos antes de tomar una decisión definitiva.`, `Para seleccionar a los comerciantes que podrán permanecer.`], "B", "Participación social", "Propósito", "Media",
+  `los datos se recopilan para evaluar antes de decidir.`);
+q("CL13", `¿Cuál sería el encabezado más preciso?`,
+  [`"Calle Norte queda cerrada permanentemente"`, `"Ayuntamiento elimina todos los vehículos de la ciudad"`, `"Inicia prueba peatonal de ocho semanas en calle Norte"`], "C", "Participación social", "Evaluación de encabezado", "Media",
+  `describe el carácter temporal y el hecho principal sin exagerarlo.`);
+q("CL14", `¿Qué debe adjuntarse al registro?`,
+  [`Credencial vigente y constancia de seguridad.`, `Comprobante de domicilio y fotografía.`, `Únicamente la credencial vigente.`], "A", "Documento administrativo", "Requisitos", "Básica",
+  `se solicitan expresamente ambos documentos.`);
+q("CL15", `¿Qué sucede después de entregar correctamente todos los requisitos?`,
+  [`Se asigna un horario inmediatamente.`, `La confirmación llega dentro de dos días hábiles.`, `Debe realizarse nuevamente el curso de seguridad.`], "B", "Documento administrativo", "Interpretación de procedimiento", "Básica",
+  `el aviso establece un máximo de dos días hábiles tras completar requisitos.`);
+
+/* ---------- SECCIÓN 4 — REDACCIÓN INDIRECTA ---------- */
+q("RI01", `¿Cuál opción es más adecuada para solicitar información formalmente a una oficina universitaria?`,
+  [`"Hola, ¿me pasan lo que necesito para entrar?"`, `"Solicito atentamente información sobre los requisitos de inscripción."`, `"Oigan, díganme qué papeles tengo que llevar."`], "B", "Redacción indirecta", "Registro formal", "Básica",
+  `mantiene cortesía y registro institucional.`);
+q("RI02", `¿Cuál oración presenta un registro apropiado para un ensayo académico?`,
+  [`"La evidencia disponible sugiere que la distribución espacial influye en el uso del lugar."`, `"Pues se ve que acomodar las cosas sí cambia bastante todo."`, `"La neta, el espacio funciona mejor así."`], "A", "Redacción indirecta", "Registro académico", "Media",
+  `utiliza formulación objetiva y apropiada para un ensayo.`);
+q("RI03", `¿Cuál fragmento corresponde mejor al inicio de una noticia?`,
+  [`"A mi parecer, la nueva biblioteca es extraordinaria."`, `"Nunca olvidaré la emoción que sentí al entrar."`, `"La biblioteca municipal abrió este lunes una nueva sala de consulta."`], "C", "Redacción indirecta", "Género noticia", "Básica",
+  `informa un hecho verificable con estilo informativo.`);
+q("RI04", `¿Cuál oración tiene concordancia nominal correcta?`,
+  [`"Las fachadas norte y sur fueron restauradas."`, `"Las fachadas norte y sur fue restaurada."`, `"Las fachadas norte y sur fueron restaurado."`], "A", "Redacción indirecta", "Concordancia nominal", "Básica",
+  `sustantivo plural y participio/adjetivo concuerdan adecuadamente.`);
+q("RI05", `¿Cuál oración presenta concordancia verbal adecuada?`,
+  [`"El conjunto de planos fueron entregados ayer."`, `"El conjunto de planos fue entregado ayer."`, `"El conjunto de planos entregaron ayer."`], "B", "Redacción indirecta", "Concordancia verbal", "Media",
+  `el núcleo del sujeto es "conjunto", singular.`);
+q("RI06", `¿Cuál redacción evita mejor la ambigüedad?`,
+  [`"Mariana entregó la maqueta a Laura y ella confirmó la recepción."`, `"Mariana entregó la maqueta y después ella confirmó eso."`, `"Mariana entregó la maqueta a Laura; Laura confirmó la recepción."`], "C", "Redacción indirecta", "Cohesión gramatical", "Media",
+  `repetir el referente elimina la ambigüedad de "ella".`);
+q("RI07", `Selecciona el conector más adecuado.\n\n"El diseño era económico; ______, no cumplía con los requisitos de accesibilidad."`,
+  [`por ejemplo`, `sin embargo`, `por lo tanto`], "B", "Redacción indirecta", "Conectores", "Básica",
+  `"sin embargo" expresa contraste.`);
+q("RI08", `¿Cuál versión evita mejor una repetición innecesaria?`,
+  [`"El edificio fue inaugurado en mayo. El inmueble tiene tres niveles."`, `"El edificio fue inaugurado en mayo. El edificio tiene tres niveles."`, `"El edificio edificio fue inaugurado y el edificio tiene tres niveles."`], "A", "Redacción indirecta", "Cohesión léxico-semántica", "Básica",
+  `"inmueble" sustituye adecuadamente a "edificio".`);
+q("RI09", `¿Cuál oración está puntuada correctamente?`,
+  [`"El proyecto considera: tres factores iluminación ventilación y circulación."`, `"El proyecto considera tres factores, iluminación; ventilación; y circulación."`, `"El proyecto considera tres factores: iluminación, ventilación y circulación."`], "C", "Redacción indirecta", "Puntuación", "Media",
+  `los dos puntos introducen correctamente la enumeración.`);
+q("RI10", `¿Cuál oración utiliza correctamente la coma de vocativo?`,
+  [`"Arquitectos, revisen las medidas antes de imprimir."`, `"Arquitectos revisen, las medidas antes de imprimir."`, `"Arquitectos revisen las medidas, antes de imprimir."`], "A", "Redacción indirecta", "Puntuación", "Básica",
+  `el vocativo "Arquitectos" debe separarse con coma.`);
+q("RI11", `¿Cuál opción está escrita correctamente?`,
+  [`"El analisis tecnico determino la solucion."`, `"El análisis técnico determinó la solución."`, `"El análísis técnico determíno la solución."`], "B", "Redacción indirecta", "Acentuación", "Básica",
+  `análisis, técnico, determinó y solución llevan las tildes mostradas.`);
+q("RI12", `¿Cuál oración utiliza la palabra correcta?`,
+  [`"La baya perimetral impide el acceso."`, `"La vaya perimetral impide el acceso."`, `"La valla perimetral impide el acceso."`], "C", "Redacción indirecta", "Ortografía grafofonética", "Media",
+  `"valla" significa cerca o barrera.`);
+q("RI13", `Ordena las siguientes ideas para formar una secuencia lógica.\n\n1. Finalmente, se compararon los resultados.\n2. Primero, se midió la iluminación de cada aula.\n3. Después, los datos se organizaron en una tabla.`,
+  [`1 - 2 - 3`, `2 - 3 - 1`, `3 - 1 - 2`], "B", "Redacción indirecta", "Cohesión textual", "Básica",
+  `primero se mide, después se organiza y finalmente se compara.`);
+q("RI14", `Selecciona el conector que mantiene mejor la relación lógica.\n\n"El acceso principal quedó bloqueado por una obra. ______, se habilitó una entrada temporal."`,
+  [`Sin embargo`, `Asimismo`, `Por ello`], "C", "Redacción indirecta", "Relación causa-consecuencia", "Media",
+  `la entrada temporal surge como consecuencia del bloqueo.`);
+q("RI15", `¿Cuál oración funciona mejor como cierre de una reseña?`,
+  [`"En conjunto, la obra desarrolla con claridad su propuesta, aunque algunas secciones requieren mayor profundidad."`, `"Mañana comenzará la inscripción para el siguiente semestre."`, `"El autor nació en una ciudad que tiene varias avenidas."`], "A", "Redacción indirecta", "Género reseña", "Media",
+  `sintetiza una valoración de la obra y sus limitaciones.`);
+
+/* ---------- SECCIÓN 5 — PENSAMIENTO MATEMÁTICO ---------- */
+q("PM01", `Resuelve:\n\n3x - 5 > 10`,
+  [`x < 5`, `x ≥ 5`, `x > 5`], "C", "Pensamiento matemático", "Inecuaciones lineales", "Básica",
+  `3x > 15; por tanto, x > 5.`);
+q("PM02", `Simplifica:\n\n2(3x - 4) + x`,
+  [`7x - 8`, `6x - 3`, `7x - 4`], "A", "Pensamiento matemático", "Expresiones algebraicas", "Básica",
+  `6x - 8 + x = 7x - 8.`);
+q("PM03", `Una habitación rectangular mide 8 m × 6 m.\nUna zona cuadrada de 2 m × 2 m no formará parte del piso útil.\n\n¿Cuál es el área útil?`,
+  [`40 m²`, `44 m²`, `48 m²`], "B", "Pensamiento matemático", "Área", "Media",
+  `8×6 - 2×2 = 48 - 4 = 44 m².`);
+q("PM04", `¿Cuál es la media aritmética de los valores?\n\n6, 8, 9, 12, 15`,
+  [`8`, `9`, `10`], "C", "Pensamiento matemático", "Media aritmética", "Básica",
+  `(6+8+9+12+15)/5 = 50/5 = 10.`);
+q("PM05", `Los conjuntos P y Q tienen la misma media.\n\nP = {9, 10, 10, 10, 11}\nQ = {2, 6, 10, 14, 18}\n\n¿Cuál afirmación es correcta?`,
+  [`P tiene menor desviación estándar porque sus valores están más concentrados.`, `Q tiene menor desviación estándar porque contiene números mayores.`, `Ambos tienen necesariamente la misma desviación estándar.`], "A", "Pensamiento matemático", "Desviación estándar", "Media",
+  `P presenta mucha menor dispersión alrededor de la media.`);
+q("PM06", `En un plano a escala 1:100, un muro mide 4.5 cm.\n\n¿Cuánto mide el muro en la realidad?`,
+  [`45 cm`, `4.5 m`, `45 m`], "B", "Pensamiento matemático", "Razones, proporciones y escala", "Media",
+  `4.5 cm × 100 = 450 cm = 4.5 m.`);
+q("PM07", `En la ecuación:\n\ny = 2x + 3\n\n¿qué representa el número 2?`,
+  [`El punto donde la recta corta el eje y.`, `El valor máximo de y.`, `El cambio de y por cada unidad que aumenta x.`], "C", "Pensamiento matemático", "Interpretación de ecuaciones lineales", "Media",
+  `2 es la pendiente de la recta.`);
+q("PM08", `¿Cuántos ejes de simetría tiene un rectángulo que no es cuadrado?`,
+  [`2`, `3`, `4`], "A", "Pensamiento matemático", "Ejes de simetría", "Básica",
+  `un rectángulo no cuadrado tiene dos ejes de simetría.`);
+q("PM09", `Una bolsa contiene 3 fichas rojas y 2 azules.\nSe extrae una ficha al azar.\n\n¿Cuál es la probabilidad de que sea roja?`,
+  [`2/5`, `3/5`, `3/2`], "B", "Pensamiento matemático", "Probabilidad simple", "Básica",
+  `existen 3 casos favorables entre 5 posibles.`);
+q("PM10", `Un material cuesta $8,000.\nSu precio aumenta 15%.\n\n¿Cuál es el nuevo precio?`,
+  [`$8,120`, `$9,000`, `$9,200`], "C", "Pensamiento matemático", "Porcentaje", "Básica",
+  `8 000 × 1.15 = 9 200.`);
+q("PM11", `Simplifica:\n\nx³ · x⁴`,
+  [`x⁷`, `x¹²`, `2x⁷`], "A", "Pensamiento matemático", "Leyes de exponentes", "Básica",
+  `al multiplicar potencias de igual base se suman exponentes.`);
+q("PM12", `¿Cuál es el vértice de la parábola?\n\ny = (x - 2)² - 3`,
+  [`(-2, -3)`, `(2, -3)`, `(2, 3)`], "B", "Pensamiento matemático", "Funciones cuadráticas", "Media",
+  `la forma y=(x-h)²+k tiene vértice (h,k).`);
+q("PM13", `Desarrolla:\n\n(x + 2)(x - 3)`,
+  [`x² + 5x - 6`, `x² - 5x + 6`, `x² - x - 6`], "C", "Pensamiento matemático", "Polinomios", "Media",
+  `x² - 3x + 2x - 6 = x² - x - 6.`);
+q("PM14", `Resuelve el sistema:\n\n2x + y = 10\nx - y = 2`,
+  [`x = 4, y = 2`, `x = 3, y = 4`, `x = 6, y = -2`], "A", "Pensamiento matemático", "Sistemas lineales", "Media",
+  `sumando las ecuaciones se obtiene 3x=12; x=4 y y=2.`);
+q("PM15", `Ordena los datos:\n\n2, 4, 5, 7, 8, 10, 12, 14\n\n¿Cuál es el segundo cuartil Q₂?`,
+  [`7`, `7.5`, `8`], "B", "Pensamiento matemático", "Medidas de posición", "Media",
+  `Q₂ es la mediana; (7+8)/2 = 7.5.`);
+
+/* ---------- SECCIÓN 6 — HABILIDADES BLANDAS Y TOMA DE DECISIONES ---------- */
+q("HB01", `Un equipo afirma:\n\n"Mejorar la ventilación del aula reduce el calor durante las horas de uso."\n\n¿Qué evidencia apoyaría mejor esa afirmación?`,
+  [`La opinión de un estudiante que prefiere ventanas grandes.`, `Una fotografía del aula después de la remodelación.`, `Mediciones comparables de temperatura y ventilación antes y después del cambio.`], "C", "Pensamiento crítico", "Evaluación de evidencia", "Media",
+  `las mediciones comparables prueban directamente la relación planteada.`);
+q("HB02", `Una persona afirma:\n\n"Dos compañeros durmieron poco y reprobaron. Por lo tanto, dormir poco siempre provoca reprobar."\n\n¿Cuál es el principal problema del razonamiento?`,
+  [`Generaliza una conclusión con evidencia insuficiente.`, `Utiliza demasiados datos para llegar a una conclusión.`, `Presenta una conclusión que necesariamente es verdadera.`], "A", "Pensamiento crítico", "Argumentación lógica", "Media",
+  `dos casos no justifican una afirmación universal.`);
+q("HB03", `Dos integrantes de un equipo defienden propuestas distintas.\nAmbas cumplen parcialmente los requisitos.\nEl plazo está por vencer.\n\n¿Cuál es la mejor primera acción del responsable del equipo?`,
+  [`Elegir la propuesta de su amigo.`, `Comparar ambas con criterios acordados y restricciones del proyecto.`, `Combinar ambas sin revisar si son compatibles.`], "B", "Toma de decisiones", "Resolución de conflictos", "Media",
+  `usar criterios explícitos permite una decisión fundamentada.`);
+q("HB04", `Antes de entregar un informe, descubres que un dato utilizado en los cálculos es incorrecto.\n\n¿Qué acción es más adecuada?`,
+  [`Mantenerlo para evitar retrasar el trabajo.`, `Entregarlo y corregirlo únicamente si alguien nota el error.`, `Informar al equipo, corregir el dato y revisar los resultados afectados.`], "C", "Toma de decisiones", "Responsabilidad y ética", "Media",
+  `corregir y comunicar evita mantener conscientemente un error.`);
+q("HB05", `¿Qué número continúa la secuencia?\n\n2, 6, 12, 20, 30, ___`,
+  [`40`, `42`, `44`], "B", "Habilidades cognitivas", "Secuencias numéricas", "Media",
+  `las diferencias son +4,+6,+8,+10 y después +12; 30+12=42.`);
+q("HB06", `Observa el patrón:\n\n2   4   8\n3   6   12\n5   10  ?\n\n¿Qué número completa la matriz?`,
+  [`20`, `15`, `25`], "A", "Habilidades cognitivas", "Matrices y patrones", "Básica",
+  `cada número de la segunda columna se duplica para obtener la tercera.`);
+q("HB07", `Todos los proyectos aprobados cuentan con revisión estructural.\n\nEl proyecto X no cuenta con revisión estructural.\n\n¿Qué conclusión se obtiene lógicamente?`,
+  [`El proyecto X está aprobado.`, `No puede saberse nada sobre su aprobación.`, `El proyecto X no pertenece al conjunto de proyectos aprobados.`], "C", "Habilidades cognitivas", "Lógica deductiva", "Alta",
+  `si aprobado implica revisión, no tener revisión excluye la aprobación.`);
+q("HB08", `¿Qué letra continúa la secuencia?\n\nA, C, F, J, ___`,
+  [`N`, `O`, `P`], "B", "Habilidades cognitivas", "Secuencias", "Media",
+  `los saltos aumentan: +2,+3,+4,+5; J+5=O.`);
+q("HB09", `Un compañero realizó una tarea distinta de la que esperabas.\nAntes de rehacer todo el trabajo, ¿qué conviene hacer?`,
+  [`Aclarar el objetivo, escuchar cómo interpretó la indicación y acordar la corrección.`, `Eliminar su trabajo sin explicaciones.`, `Ignorar el problema para evitar una conversación incómoda.`], "A", "Habilidades blandas", "Comunicación", "Básica",
+  `aclarar expectativas y escuchar permite corregir el origen del problema.`);
+q("HB10", `Un integrante clave de un equipo avisa que no podrá asistir el día antes de una entrega.\n\n¿Cuál es la respuesta de liderazgo más adecuada?`,
+  [`Repartir sus tareas al azar.`, `Mantener el plan original aunque ya sea imposible.`, `Repriorizar actividades, distribuirlas según capacidad y confirmar responsabilidades.`], "C", "Habilidades blandas", "Liderazgo", "Media",
+  `repriorizar y asignar según capacidades protege el objetivo del equipo.`);
+q("HB11", `Horas antes de una presentación cambian varios requisitos.\n\n¿Qué respuesta muestra mayor adaptabilidad?`,
+  [`Mantener todo igual aunque ya no cumpla las indicaciones.`, `Identificar los cambios, priorizar ajustes y coordinar al equipo.`, `Empezar nuevamente todo sin revisar qué partes siguen siendo útiles.`], "B", "Habilidades blandas", "Adaptabilidad", "Media",
+  `primero se identifican cambios y luego se ajusta únicamente lo necesario.`);
+
+</script>
+<script>
+(function () {
+  "use strict";
+
+  const app = document.getElementById("app");
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const LET = ["A", "B", "C"];
+  const CONF = ["Seguro", "Dudé", "Adiviné"];
+  const TARGET_MIN = 125;
+  const KEY = "diag_buap_arq_v1";
+
+  /* ---------- banco de reactivos ---------- */
+  const Q = RAW.map((r) => {
+    let passage = null, grp = null;
+    for (const k in PASSAGES) if (PASSAGES[k].ids.includes(r.id)) passage = k;
+    for (const g in STUDY_GROUPS) if (STUDY_GROUPS[g].includes(r.id)) grp = g;
+    return Object.assign({}, r, { sec: r.id.slice(0, 2), passage, grp, keyI: LET.indexOf(r.key) });
+  });
+  const N = Q.length;
+
+  /* ---------- estado y guardado ---------- */
+  const pad = (n) => String(n).padStart(2, "0");
+  function todayISO() { const d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function fresh() {
+    return { phase: "intro", student: { name: "", date: todayISO(), obs: "" }, ans: {}, flags: {}, idx: 0, total: 0, perQ: {}, startedAt: null, finishedAt: null };
+  }
+  let storageOK = true;
+  try { localStorage.setItem(KEY + "_t", "1"); localStorage.removeItem(KEY + "_t"); } catch (e) { storageOK = false; }
+  function load() {
+    try {
+      const r = localStorage.getItem(KEY);
+      if (r) { const s = JSON.parse(r); if (s && s.phase) return Object.assign(fresh(), s); }
+    } catch (e) {}
+    try {
+      if (window.name && window.name.indexOf(KEY + ":") === 0) {
+        const s = JSON.parse(window.name.slice(KEY.length + 1));
+        if (s && s.phase) return Object.assign(fresh(), s);
+      }
+    } catch (e) {}
+    return fresh();
+  }
+  function save() {
+    const j = JSON.stringify(S);
+    try { localStorage.setItem(KEY, j); } catch (e) {}
+    try { window.name = KEY + ":" + j; } catch (e) {}
+  }
+  let S = load();
+  if (S.idx < 0 || S.idx >= N) S.idx = 0;
+
+  const isComplete = (q) => { const a = S.ans[q.id]; return !!a && a.opt != null && !!a.conf; };
+
+  /* ---------- utilidades ---------- */
+  function fmtClock(ms) {
+    const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+    return h ? h + ":" + pad(m) + ":" + pad(x) : pad(m) + ":" + pad(x);
+  }
+  function fmtLong(ms) {
+    const s = Math.round(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+    return (h ? h + " h " : "") + m + " min " + x + " s";
+  }
+  function fmtDate(iso) { if (!iso) return "—"; const p = iso.split("-"); return p.length === 3 ? p[2] + "/" + p[1] + "/" + p[0] : iso; }
+  function slug(s) { return (s || "estudiante").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40) || "estudiante"; }
+  function toast(msg) {
+    const old = $(".toast"); if (old) old.remove();
+    const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = msg;
+    document.body.appendChild(t); setTimeout(() => t.remove(), 3600);
+  }
+  function modal(title, body, okText, onOk, danger) {
+    const ov = document.createElement("div"); ov.className = "overlay";
+    ov.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><h3 id="mt">${esc(title)}</h3><div>${body}</div><div class="row"><button class="btn" data-m="no">Cancelar</button><button class="btn ${danger ? "danger" : "primary"}" data-m="ok">${esc(okText)}</button></div></div>`;
+    document.body.appendChild(ov);
+    const close = () => { ov.remove(); document.removeEventListener("keydown", esc_); };
+    const esc_ = (e) => { if (e.key === "Escape") close(); };
+    document.addEventListener("keydown", esc_);
+    ov.addEventListener("click", (e) => {
+      const m = e.target.getAttribute && e.target.getAttribute("data-m");
+      if (m === "no" || e.target === ov) close();
+      if (m === "ok") { close(); onOk(); }
+    });
+    $('[data-m="no"]', ov).focus();
+  }
+  const flagIcon = `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 15V2m0 0h9l-2 3.5L12 9H3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+
+  /* ---------- temporizador ---------- */
+  let last = Date.now(), ctr = 0;
+  setInterval(() => {
+    const now = Date.now(); let dt = now - last; last = now;
+    if (document.hidden) return;
+    if (dt > 3000) dt = 1000;
+    if (S.phase === "exam" || S.phase === "review") {
+      S.total += dt;
+      if (S.phase === "exam") { const id = Q[S.idx].id; S.perQ[id] = (S.perQ[id] || 0) + dt; }
+      const c = $("#clock"); if (c) c.textContent = fmtClock(S.total);
+      if (++ctr >= 5) { ctr = 0; save(); }
+    }
+  }, 1000);
+  document.addEventListener("visibilitychange", () => { last = Date.now(); if (document.hidden) save(); });
+  window.addEventListener("pagehide", save);
+
+  /* ---------- render principal ---------- */
+  function render(top) {
+    if (S.phase === "intro") viewIntro();
+    else if (S.phase === "exam") viewExam();
+    else if (S.phase === "review") viewReview();
+    else viewResults();
+    if (top !== false) window.scrollTo(0, 0);
+  }
+
+  /* ---------- pantalla inicial ---------- */
+  function viewIntro() {
+    app.innerHTML = `
+    <header class="hero"><div class="wrap">
+      <h1>Diagnóstico inicial BUAP — Arquitectura</h1>
+      <p class="sub">EXANI-II-EPIU — Ingenierías y Ciencias Exactas</p>
+      <span class="tag">Herramienta de estudio, no es un examen oficial de CENEVAL</span>
+    </div></header>
+    <main class="wrap intro-grid">
+      <section class="card letter" aria-label="Instrucciones">
+        <h2>Antes de empezar</h2>
+        <p class="lead">Este diagnóstico no busca ponerte una calificación.<br>Su objetivo es identificar qué temas necesitas trabajar.</p>
+        <div class="rules"><p>Contesta sin ayuda.<br>No uses Google.<br>No uses inteligencia artificial.<br>No consultes apuntes.<br>Usa solamente hoja y lápiz.</p></div>
+        <p>Si no estás seguro, responde lo que consideres correcto.<br>Después de cada respuesta indica:</p>
+        <ul><li>Seguro</li><li>Dudé</li><li>Adiviné</li></ul>
+        <p>Es importante responder honestamente.<br>Equivocarte aquí nos ayuda a saber qué estudiar.</p>
+      </section>
+      <section class="card" aria-label="Datos del estudiante">
+        <h2>Tus datos</h2>
+        <label class="field"><span>Nombre del estudiante</span><input id="f-name" type="text" autocomplete="name" value="${esc(S.student.name)}" placeholder="Nombre y apellido"></label>
+        <label class="field"><span>Fecha</span><input id="f-date" type="date" value="${esc(S.student.date)}"></label>
+        <label class="field"><span>Observaciones <small>(opcional)</small></span><textarea id="f-obs" placeholder="Por ejemplo: dormí poco, hoy me siento cansado, tengo dudas sobre…">${esc(S.student.obs)}</textarea></label>
+        <ul class="meta-list">
+          <li>${N} preguntas, una a la vez</li>
+          <li>Tiempo de referencia: ${TARGET_MIN} minutos (el examen no se cierra solo)</li>
+          <li>Tu avance se guarda automáticamente; si recargas, sigues donde te quedaste</li>
+          <li>Puedes regresar y cambiar respuestas antes del envío final</li>
+        </ul>
+        ${storageOK ? "" : `<p class="notice">Este navegador limita el guardado automático. Mantén abierta esta pestaña hasta terminar y no uses modo incógnito.</p>`}
+        <button class="btn primary" id="start" style="width:100%">Comenzar diagnóstico</button>
+      </section>
+    </main>`;
+    const nm = $("#f-name"), dt = $("#f-date"), ob = $("#f-obs"), st = $("#start");
+    const upd = () => { S.student.name = nm.value; S.student.date = dt.value; S.student.obs = ob.value; st.disabled = !nm.value.trim() || !dt.value; save(); };
+    [nm, dt, ob].forEach((el) => el.addEventListener("input", upd));
+    st.disabled = !nm.value.trim() || !dt.value;
+    st.addEventListener("click", () => {
+      upd(); if (st.disabled) return;
+      S.phase = "exam"; S.idx = 0; S.startedAt = Date.now(); save(); render();
+    });
+  }
+
+  /* ---------- examen ---------- */
+  function passageHTML(p) {
+    let html = "", list = [];
+    const flush = () => { if (list.length) { html += "<ul>" + list.map((x) => `<li>${esc(x)}</li>`).join("") + "</ul>"; list = []; } };
+    p.paras.forEach((t, i) => {
+      if (t.startsWith("- ")) { list.push(t.slice(2)); return; }
+      flush();
+      html += p.title.startsWith("Texto D") && i === 0 ? `<p class="ttl">${esc(t)}</p>` : `<p>${esc(t)}</p>`;
+    });
+    flush();
+    return `<aside class="passage" aria-label="${esc(p.title)}"><h3>${esc(p.title)}</h3>${html}</aside>`;
+  }
+
+  function viewExam() {
+    const q = Q[S.idx], p = q.passage ? PASSAGES[q.passage] : null;
+    app.innerHTML = `
+    <header class="topbar"><div class="wrap">
+      <div class="toprow">
+        <div class="brand">Diagnóstico inicial BUAP<small>Arquitectura</small></div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <button class="btn small ghost" data-act="map">Mapa</button>
+          <div class="clock"><span id="clock">${fmtClock(S.total)}</span><small>referencia: ${TARGET_MIN} min</small></div>
+        </div>
+      </div>
+      <div class="ruler" id="ruler" role="progressbar" aria-label="Progreso" aria-valuemin="0" aria-valuemax="${N}"></div>
+      <div class="rulermeta"><span id="rmL"></span><span id="rmR"></span></div>
+    </div></header>
+    <main class="wrap stage"><div class="qwrap ${p ? "two" : ""}">
+      ${p ? passageHTML(p) : ""}
+      <section class="qcard" aria-labelledby="qt">
+        <div class="qhead"><h2 id="qt">Pregunta ${S.idx + 1} de ${N}</h2>
+          <button class="flagbtn" id="flag" aria-pressed="false">${flagIcon}<span>Marcar para revisión</span></button></div>
+        <p class="prompt">${esc(q.prompt)}</p>
+        <fieldset class="opts"><legend class="sr">Elige una respuesta</legend>
+          ${q.opts.map((t, i) => `<label class="opt"><input type="radio" name="opt" value="${i}"><span class="ltr">${LET[i]}</span><span class="otxt">${esc(t)}</span></label>`).join("")}
+        </fieldset>
+        <div class="conf"><fieldset><legend><h3>¿Qué tan seguro estás de esta respuesta?</h3></legend>
+          <div class="confrow">${CONF.map((c) => `<label class="cf"><input type="radio" name="conf" value="${c}"><span>${c}</span></label>`).join("")}</div>
+        </fieldset></div>
+      </section>
+    </div></main>
+    <nav class="navbar" aria-label="Navegación"><div class="wrap">
+      <button class="btn" id="prev">Anterior</button>
+      <span class="navhint" id="hint" aria-live="polite"></span>
+      <button class="btn primary" id="next"></button>
+    </div></nav>`;
+    refreshExam();
+  }
+
+  function rulerHTML() {
+    return Q.map((q, i) => {
+      const c = i === S.idx ? "cur" : S.flags[q.id] ? "flag" : isComplete(q) ? "done" : "";
+      return `<i class="${c}"></i>`;
+    }).join("");
+  }
+
+  function refreshExam() {
+    const q = Q[S.idx], a = S.ans[q.id] || {};
+    $$(".opt").forEach((el, i) => { const on = a.opt === i; el.classList.toggle("on", on); $("input", el).checked = on; });
+    $$(".cf").forEach((el, i) => { const on = a.conf === CONF[i]; el.classList.toggle("on", on); $("input", el).checked = on; });
+    const fl = !!S.flags[q.id], fb = $("#flag");
+    fb.setAttribute("aria-pressed", fl); $("span", fb).textContent = fl ? "Marcada para revisión" : "Marcar para revisión";
+    const done = Q.filter(isComplete).length, flags = Q.filter((x) => S.flags[x.id]).length;
+    $("#ruler").innerHTML = rulerHTML(); $("#ruler").setAttribute("aria-valuenow", done);
+    $("#rmL").textContent = done + " de " + N + " completas";
+    $("#rmR").textContent = flags ? flags + (flags === 1 ? " marcada" : " marcadas") : "";
+    const h = $("#hint"), ok = isComplete(q);
+    h.textContent = ok ? "Respuesta y seguridad registradas" : a.opt == null ? "Elige una opción" : "Indica qué tan seguro estás";
+    h.classList.toggle("ok", ok);
+    $("#prev").disabled = S.idx === 0;
+    $("#next").textContent = S.idx === N - 1 ? "Revisar y enviar" : "Siguiente";
+  }
+
+  function setAns(k, v) {
+    const id = Q[S.idx].id;
+    S.ans[id] = Object.assign({}, S.ans[id], { [k]: v });
+    save(); refreshExam();
+  }
+  function goTo(i) { S.idx = Math.max(0, Math.min(N - 1, i)); S.phase = "exam"; save(); render(); }
+
+  /* ---------- revisión previa al envío ---------- */
+  function viewReview() {
+    const inc = Q.filter((q) => !isComplete(q)), flg = Q.filter((q) => S.flags[q.id]);
+    const first = inc.length ? Q.indexOf(inc[0]) : S.idx;
+    app.innerHTML = `
+    <header class="topbar"><div class="wrap"><div class="toprow">
+      <div class="brand">Diagnóstico inicial BUAP<small>Revisión antes de enviar</small></div>
+      <div class="clock"><span id="clock">${fmtClock(S.total)}</span><small>referencia: ${TARGET_MIN} min</small></div>
+    </div></div></header>
+    <main class="wrap review stage" style="padding-bottom:60px">
+      <h1>Revisa tu avance</h1>
+      <p style="color:var(--muted);max-width:60ch">Toca un número para volver a esa pregunta. Cada pregunta necesita una opción (A, B o C) y un nivel de seguridad.</p>
+      <div class="stats">
+        <div class="stat"><b>${N - inc.length}</b><span>completas</span></div>
+        <div class="stat"><b>${inc.length}</b><span>pendientes</span></div>
+        <div class="stat"><b>${flg.length}</b><span>marcadas para revisión</span></div>
+      </div>
+      <div class="qgrid">${Q.map((q, i) => {
+        const a = S.ans[q.id], c = isComplete(q) ? "done" : a && (a.opt != null || a.conf) ? "half" : "";
+        return `<button class="qg ${c} ${S.flags[q.id] ? "flag" : ""}" data-go="${i}" aria-label="Pregunta ${i + 1}${c === "done" ? ", completa" : c === "half" ? ", incompleta" : ", sin responder"}${S.flags[q.id] ? ", marcada" : ""}">${i + 1}</button>`;
+      }).join("")}</div>
+      <div class="legend"><span><i class="l1"></i>Completa</span><span><i class="l2"></i>Falta opción o seguridad</span><span><i class="l3"></i>Sin responder</span><span><i class="l4"></i>Marcada</span></div>
+      ${inc.length ? `<p class="notice" style="margin-top:20px">Faltan ${inc.length} pregunta${inc.length > 1 ? "s" : ""} por completar. No se puede enviar hasta terminarlas.</p>` : `<p class="notice" style="margin-top:20px">Todo está completo. Si quieres, revisa las marcadas antes de enviar.</p>`}
+      <div class="actions" style="margin-top:22px">
+        <button class="btn" data-go="${first}">${inc.length ? "Ir a la primera pendiente" : "Volver a las preguntas"}</button>
+        <button class="btn primary" data-act="submit" ${inc.length ? "disabled" : ""}>Enviar diagnóstico</button>
+      </div>
+    </main>`;
+  }
+
+  /* ---------- análisis ---------- */
+  function levelOf(p) {
+    const f = Math.floor(p + 1e-9);
+    if (f < 50) return { txt: "Prioridad alta", cls: "bad", bar: "c-bad" };
+    if (f < 70) return { txt: "Reforzar", cls: "warn", bar: "c-warn" };
+    if (f < 85) return { txt: "Buen nivel; consolidar", cls: "mid", bar: "c-mid" };
+    return { txt: "Fortaleza probable", cls: "good", bar: "c-good" };
+  }
+  const plural = (n, s, p) => n + " " + (n === 1 ? s : p);
+
+  function rate(list, share) {
+    const n = list.length, c = list.filter((i) => i.ok).length, err = n - c;
+    const cnt = (l) => list.filter((i) => i.lvl === l).length;
+    const l1 = cnt(1), l2 = cnt(2), l3 = cnt(3);
+    let sum = 0, imp = 0, slow = 0;
+    list.forEach((i) => {
+      const pts = [0, 3, 2, 1, 0][i.lvl];
+      sum += pts + (pts > 0 && i.slow ? 0.5 : 0);
+      if (pts > 0 && i.slow) slow++;
+      imp += 1 + share[i.q.sec];
+    });
+    const adj = sum * (err >= 2 ? 1.25 : 1) * (imp / n), dens = adj / n;
+    let tier, label, cls;
+    if (err === 0 && l3 === 0) { tier = 4; label = n >= 2 ? "Fortaleza probable" : "Indicio favorable"; cls = "good"; }
+    else if (err === 0) { tier = 3; label = "Prioridad 3 (consolidar)"; cls = "mid"; }
+    else if (n >= 2 && (dens >= 1.5 || err >= 3 || (err >= 2 && l1 >= 1))) { tier = 1; label = "Prioridad 1"; cls = "bad"; }
+    else { tier = 2; label = "Prioridad 2"; cls = "warn"; }
+    let evid;
+    if (n === 1) evid = c ? (l3 ? "Indicio favorable (con duda)" : "Indicio favorable") : "Indicio de dificultad";
+    else { evid = levelOf((c / n) * 100).txt; if (l1) evid += "; posible concepto erróneo"; else if (l3 && err === 0) evid += "; con dudas"; }
+    const parts = [];
+    if (l1) parts.push(plural(l1, "incorrecto marcado", "incorrectos marcados") + ' como "Seguro" (posible concepto erróneo)');
+    if (l2) parts.push(plural(l2, "incorrecto", "incorrectos") + " con duda o adivinanza");
+    if (l3) parts.push(plural(l3, "acierto", "aciertos") + " con duda o adivinanza");
+    if (err >= 2) parts.push("el mismo tema falla en varios reactivos");
+    if (slow) parts.push("tiempo alto en " + plural(slow, "reactivo", "reactivos"));
+    if (n === 1) parts.push("un solo reactivo: es únicamente un indicio");
+    if (tier === 4 && n >= 2) parts.push("aciertos consistentes y con seguridad");
+    if (tier === 4 && n === 1) parts.push("acierto con seguridad; un solo reactivo no demuestra dominio");
+    return { n, c, err, l1, l2, l3, adj, dens, tier, label, cls, evid, reason: parts.join("; ") };
+  }
+
+  function analyze() {
+    const share = {}; SEC_ORDER.forEach((k) => (share[k] = Q.filter((q) => q.sec === k).length / N));
+    const items = Q.map((q) => {
+      const a = S.ans[q.id] || {}, ok = a.opt === q.keyI, conf = a.conf || "Adiviné", t = S.perQ[q.id] || 0;
+      return { q, a, ok, conf, t, lvl: ok ? (conf === "Seguro" ? 4 : 3) : conf === "Seguro" ? 1 : 2 };
+    });
+    const times = items.map((i) => i.t).filter((x) => x > 0).sort((a, b) => a - b);
+    const med = times.length ? times[Math.floor(times.length / 2)] : 0;
+    items.forEach((i) => (i.slow = med > 0 && i.t > 1.5 * med));
+    const by = {}; items.forEach((i) => (by[i.q.id] = i));
+    const correct = items.filter((i) => i.ok).length, pct = (correct / N) * 100;
+    const areas = SEC_ORDER.map((k) => {
+      const its = items.filter((i) => i.q.sec === k), c = its.filter((i) => i.ok).length, p = (c / its.length) * 100;
+      return { k, name: SEC[k], n: its.length, c, pct: p, lvl: levelOf(p), items: its };
+    });
+    const groups = Object.keys(STUDY_GROUPS).map((g) => {
+      const its = STUDY_GROUPS[g].map((id) => by[id]);
+      return Object.assign({ name: g, ids: STUDY_GROUPS[g], items: its }, rate(its, share));
+    });
+    const cmp = (a, b) => a.tier - b.tier || b.adj - a.adj || b.n - a.n;
+    groups.sort(cmp);
+    const subMap = {};
+    items.forEach((i) => { const k = i.q.sec + "|" + i.q.area + "|" + i.q.sub; (subMap[k] = subMap[k] || { sec: i.q.sec, area: i.q.area, name: i.q.sub, items: [] }).items.push(i); });
+    const subs = Object.values(subMap).map((s) => Object.assign(s, { ids: s.items.map((i) => i.q.id) }, rate(s.items, share)));
+    subs.sort((a, b) => SEC_ORDER.indexOf(a.sec) - SEC_ORDER.indexOf(b.sec) || a.tier - b.tier);
+    const cats = [
+      { t: "Incorrectas marcadas como Seguro", h: "Posible concepto erróneo: conviene revisarlas primero.", f: (i) => !i.ok && i.conf === "Seguro" },
+      { t: "Incorrectas marcadas como Dudé", h: "Posible falta de conocimiento o de procedimiento.", f: (i) => !i.ok && i.conf === "Dudé" },
+      { t: "Incorrectas marcadas como Adiviné", h: "Posible falta de conocimiento o de procedimiento.", f: (i) => !i.ok && i.conf === "Adiviné" },
+      { t: "Correctas marcadas como Adiviné", h: "Acierto poco confiable: con tres opciones, adivinar acierta 1 de cada 3.", f: (i) => i.ok && i.conf === "Adiviné" },
+      { t: "Correctas marcadas como Dudé", h: "Conocimiento frágil: falta consolidar.", f: (i) => i.ok && i.conf === "Dudé" }
+    ].map((c) => Object.assign(c, { list: items.filter(c.f) }));
+    const slowest = items.slice().sort((a, b) => b.t - a.t).slice(0, 5);
+    return { items, by, correct, pct, lvl: levelOf(pct), areas, groups, subs, cats, slowest, med };
+  }
+
+  /* ---------- reporte de texto ---------- */
+  function buildReport(an) {
+    const L = [], w = (s) => L.push(s == null ? "" : s), ids = (arr) => arr.map((i) => i.q.id).join(", ") || "ninguna";
+    w("DIAGNÓSTICO INICIAL BUAP — ARQUITECTURA");
+    w("EXANI-II-EPIU — Ingenierías y Ciencias Exactas");
+    w("Nota: herramienta interna de estudio. No es un examen oficial CENEVAL, no estima probabilidad de admisión y no convierte el resultado a puntaje CENEVAL.");
+    w("");
+    w("Nombre: " + (S.student.name || "—"));
+    w("Fecha: " + fmtDate(S.student.date));
+    if (S.student.obs && S.student.obs.trim()) w("Observaciones del estudiante: " + S.student.obs.trim());
+    w("Tiempo total: " + fmtLong(S.total) + " (referencia: " + TARGET_MIN + " min; promedio aprox. por pregunta: " + fmtClock(S.total / N) + ")");
+    w("Puntaje: " + an.correct + "/" + N + " (" + an.pct.toFixed(1) + "%). Nivel interno: " + an.lvl.txt);
+    w("");
+    w("PUNTAJE POR SECCIÓN");
+    an.areas.forEach((a) => w("- " + a.name + " (" + a.k + "): " + a.c + "/" + a.n + " (" + a.pct.toFixed(1) + "%). " + a.lvl.txt));
+    w("");
+    const wrong = an.items.filter((i) => !i.ok);
+    w("PREGUNTAS INCORRECTAS (" + wrong.length + "): " + ids(wrong));
+    w("");
+    w("PRIORIDADES DETECTADAS POR REACTIVO");
+    const lv = [["Nivel 1 — incorrecta + Seguro (posible concepto erróneo)", 1], ["Nivel 2 — incorrecta + Dudé/Adiviné (posible falta de conocimiento o procedimiento)", 2], ["Nivel 3 — correcta + Dudé/Adiviné (conocimiento frágil)", 3], ["Nivel 4 — correcta + Seguro (fortaleza probable)", 4]];
+    lv.forEach(([t, n]) => { const l = an.items.filter((i) => i.lvl === n); w(t + " [" + l.length + "]: " + ids(l)); });
+    w("");
+    w("¿QUÉ DEBEMOS ESTUDIAR PRIMERO?");
+    const blocks = [["PRIORIDAD 1", (g) => g.tier === 1], ["PRIORIDAD 2", (g) => g.tier === 2], ["PRIORIDAD 3 (consolidar)", (g) => g.tier === 3], ["FORTALEZAS PROBABLES", (g) => g.tier === 4 && g.n >= 2], ["INDICIOS FAVORABLES (un solo reactivo; no demuestran dominio)", (g) => g.tier === 4 && g.n === 1]];
+    blocks.forEach(([t, f]) => {
+      const l = an.groups.filter(f); if (!l.length) return;
+      w(t);
+      l.forEach((g) => w("- " + g.name + " [" + g.ids.join(", ") + "]. Motivo: " + g.reason + "."));
+      w("");
+    });
+    w("LISTA ORDENADA DE TEMAS PARA ESTUDIAR PRIMERO");
+    const ord = an.groups.filter((g) => g.tier <= 3);
+    if (!ord.length) w("(sin temas pendientes)");
+    ord.forEach((g, i) => w((i + 1) + ". " + g.name + " — " + g.label + " (" + g.c + "/" + g.n + " aciertos)"));
+    w("");
+    w("TABLA POR ÁREA");
+    w("Área | Aciertos | Total | % | Nivel interno");
+    an.areas.forEach((a) => w(a.name + " | " + a.c + " | " + a.n + " | " + a.pct.toFixed(1) + "% | " + a.lvl.txt));
+    w("");
+    w("TABLA POR TEMA DE ESTUDIO");
+    w("Tema | Reactivos | Aciertos | Errores | Evidencia | Prioridad");
+    an.groups.forEach((g) => w(g.name + " | " + g.ids.join(" ") + " | " + g.c + " | " + g.err + " | " + g.evid + " | " + g.label));
+    w("");
+    w("TABLA POR SUBTEMA");
+    w("Subtema | Reactivos | Aciertos | Errores | Evidencia | Prioridad");
+    an.subs.forEach((s) => w(s.name + " | " + s.ids.join(" ") + " | " + s.c + " | " + s.err + " | " + s.evid + " | " + s.label));
+    w("");
+    w("REACTIVOS PARA REVISAR CON EL TUTOR (en orden)");
+    an.cats.forEach((c) => w(c.t + " [" + c.list.length + "]: " + ids(c.list)));
+    w("");
+    w("DETALLE DE TODAS LAS RESPUESTAS");
+    w("ID | Elegida | Correcta | Seguridad | Resultado | Nivel | Tiempo | Subtema");
+    an.items.forEach((i) => w(i.q.id + " | " + (i.a.opt != null ? LET[i.a.opt] : "-") + " | " + i.q.key + " | " + i.conf + " | " + (i.ok ? "Correcta" : "Incorrecta") + " | " + i.lvl + " | " + fmtClock(i.t) + " | " + i.q.sub + (S.flags[i.q.id] ? " (marcada)" : "")));
+    w("");
+    w("Aviso: los temas con un solo reactivo son solamente indicios. Un único acierto no demuestra dominio completo de un tema.");
+    return L.join("\n");
+  }
+
+  async function copyReport() {
+    const txt = buildReport(analyze());
+    try { await navigator.clipboard.writeText(txt); toast("Reporte copiado. Ya puedes pegarlo en un mensaje."); return; } catch (e) {}
+    try {
+      const ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove();
+      if (ok) { toast("Reporte copiado. Ya puedes pegarlo en un mensaje."); return; }
+    } catch (e) {}
+    const d = $("#repbox"); if (d) { d.open = true; d.scrollIntoView(); }
+    toast("No se pudo copiar automáticamente. Selecciona el texto del reporte y cópialo.");
+  }
+  async function shareReport() {
+    const txt = buildReport(analyze());
+    if (navigator.share) {
+      try { await navigator.share({ title: "Reporte diagnóstico BUAP — " + (S.student.name || "Estudiante"), text: txt }); return; }
+      catch (e) { if (e && e.name === "AbortError") return; }
+    }
+    copyReport();
+  }
+  async function downloadReport() {
+    const txt = buildReport(analyze()), fn = "diagnostico_BUAP_" + slug(S.student.name) + "_" + (S.student.date || "") + ".txt";
+    try {
+      const d = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
+      if (d) { await d.save({ filename: fn, data: txt }); toast("Reporte guardado."); return; }
+    } catch (e) { if (e && e.code === "declined") return; }
+    try {
+      const b = new Blob([txt], { type: "text/plain;charset=utf-8" }), u = URL.createObjectURL(b), a = document.createElement("a");
+      a.href = u; a.download = fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 2500);
+      toast("Descargando el reporte. Si no aparece, usa «Copiar reporte para el tutor».");
+    } catch (e) { toast("No se pudo descargar. Usa «Copiar reporte para el tutor»."); }
+  }
+
+  /* ---------- resultados ---------- */
+  const chip = (cls, t) => `<span class="chip ${cls}">${esc(t)}</span>`;
+
+  function reviewCard(i, withPassage) {
+    const q = i.q, ansTxt = i.a.opt != null ? LET[i.a.opt] + ") " + q.opts[i.a.opt] : "Sin respuesta";
+    const ptxt = q.passage && withPassage ? `<details><summary>Ver el texto de lectura</summary>${passageHTML(PASSAGES[q.passage])}</details>` : "";
+    return `<details class="rv"><summary><span class="rid">${q.id}</span><span class="rsub">${esc(q.sub)}</span>${chip(i.ok ? "good" : "bad", i.ok ? "Correcta" : "Incorrecta")}${chip("neutral", i.conf)}</summary>
+      <div class="rbody">${ptxt}<p class="ptxt">${esc(q.prompt)}</p>
+        <div class="ans"><div class="st ${i.ok ? "okk" : ""}"><b>Respondió:</b> ${esc(ansTxt)}</div>${i.ok ? "" : `<div class="ck"><b>Correcta:</b> ${LET[q.keyI]}) ${esc(q.opts[q.keyI])}</div>`}</div>
+        <div class="expl"><b>Explicación:</b> ${esc(q.expl.charAt(0).toUpperCase() + q.expl.slice(1))}</div>
+        <div class="rmeta">Seguridad: ${i.conf}. Tiempo aproximado: ${fmtClock(i.t)}. Tema de estudio: ${esc(q.grp)}.</div>
+      </div></details>`;
+  }
+
+  function subRows(list) {
+    return list.map((s) => `<tr><td>${esc(s.name)}</td><td>${esc(s.ids.join(", "))}</td><td class="n">${s.c}</td><td class="n">${s.err}</td><td>${esc(s.evid)}</td><td>${chip(s.cls, s.label)}</td></tr>`).join("");
+  }
+
+  function viewResults() {
+    const an = analyze(), nm = S.student.name || "Estudiante";
+    const matrix = (ok, c) => an.items.filter((i) => i.ok === ok && i.conf === c).length;
+    const idl = (l) => (l.length ? l.map((i) => i.q.id).join(", ") : "Ninguna");
+    const cw = an.items.filter((i) => i.ok && i.conf === "Dudé"), cg = an.items.filter((i) => i.ok && i.conf === "Adiviné"), ws = an.items.filter((i) => !i.ok && i.conf === "Seguro");
+    const tiers = [["p1", "Prioridad 1", 1, "Empieza aquí."], ["p2", "Prioridad 2", 2, "Después de la prioridad 1."], ["p3", "Prioridad 3: consolidar", 3, "Ya acierta, pero con dudas. Práctica breve para afianzar."]];
+    const strong = an.groups.filter((g) => g.tier === 4 && g.n >= 2), hints = an.groups.filter((g) => g.tier === 4 && g.n === 1);
+    const dev = S.total - TARGET_MIN * 60000;
+    app.innerHTML = `
+    <nav class="resnav" aria-label="Secciones"><div class="wrap">
+      <a href="#areas">Áreas</a><a href="#estudiar">Qué estudiar primero</a><a href="#seguridad">Seguridad</a><a href="#tablas">Tablas</a><a href="#revisar">Revisar con el tutor</a><a href="#reporte">Reporte</a>
+    </div></nav>
+    <header class="rhero"><div class="wrap">
+      <div class="who">${esc(nm)}, ${esc(fmtDate(S.student.date))}</div>
+      <h1>Resultado del diagnóstico</h1>
+      <div class="scoreline">
+        <div class="big"><b>${an.correct}<small> / ${N}</small></b><span>aciertos totales</span></div>
+        <div class="big"><b>${an.pct.toFixed(1)}<small>%</small></b><span>porcentaje total, nivel interno: ${esc(an.lvl.txt)}</span></div>
+        <div class="big"><b style="font-size:38px">${fmtClock(S.total)}</b><span>tiempo empleado (${esc(fmtLong(S.total))}); referencia ${TARGET_MIN} min, ${dev <= 0 ? "dentro de la referencia" : "excedió " + Math.round(dev / 60000) + " min"}</span></div>
+      </div>
+      <p class="notice">Este resultado es solo un diagnóstico interno de estudio. No es una calificación CENEVAL, no estima la probabilidad de admisión y sus rangos no son oficiales. Sirve para decidir qué estudiar primero.</p>
+      <div class="actions"><button class="btn primary" data-act="share">Enviar reporte (WhatsApp u otra app)</button><button class="btn" data-act="copy">Copiar reporte para el tutor</button><button class="btn" data-act="download">Descargar reporte</button></div>
+    </div></header>
+    <main class="wrap">
+      <section class="blk" id="areas"><h2>Resultado por área</h2>
+        <p class="lede">Rangos internos: 0-49% prioridad alta, 50-69% reforzar, 70-84% buen nivel para consolidar, 85-100% fortaleza probable.</p>
+        <div class="card" style="padding:8px 22px">${an.areas.map((a) => `
+          <div class="arow"><div class="nm">${esc(a.name)}<small>${a.n} reactivos</small></div>
+            <div class="bar" role="img" aria-label="${a.pct.toFixed(0)} por ciento"><i class="${a.lvl.bar}" style="width:${a.pct}%"></i></div>
+            <div class="val">${a.c}/${a.n}, ${a.pct.toFixed(0)}%<small>${chip(a.lvl.cls, a.lvl.txt)}</small></div></div>`).join("")}</div>
+      </section>
+
+      <section class="blk" id="estudiar"><h2>¿Qué debemos estudiar primero?</h2>
+        <p class="lede">El orden no depende solo del porcentaje. Combina cantidad de errores, seguridad declarada, tiempo empleado, repetición del problema en varios reactivos y el peso del área dentro del diagnóstico.</p>
+        ${tiers.map(([c, t, n, d]) => {
+          const l = an.groups.filter((g) => g.tier === n); if (!l.length) return "";
+          return `<div class="prio ${c}"><h3>${t}</h3><p style="color:var(--muted);margin-bottom:12px">${d}</p><ul>${l.map((g) => `<li><b>${esc(g.name)} <span style="font-weight:600">(${g.c}/${g.n} aciertos; ${esc(g.ids.join(", "))})</span></b><span>Motivo: ${esc(g.reason)}.</span></li>`).join("")}</ul></div>`;
+        }).join("")}
+        ${strong.length ? `<div class="prio pf"><h3>Fortalezas probables</h3><ul>${strong.map((g) => `<li><b>${esc(g.name)} <span style="font-weight:600">(${g.c}/${g.n})</span></b><span>Motivo: ${esc(g.reason)}.</span></li>`).join("")}</ul></div>` : ""}
+        ${hints.length ? `<div class="prio pf"><h3>Indicios favorables</h3><p style="color:var(--muted)">Son temas con un solo reactivo. Un único acierto no demuestra dominio completo.</p><ul>${hints.map((g) => `<li><b>${esc(g.name)} <span style="font-weight:600">(${esc(g.ids.join(", "))})</span></b><span>${esc(g.reason)}.</span></li>`).join("")}</ul></div>` : ""}
+      </section>
+
+      <section class="blk" id="seguridad"><h2>Seguridad frente a resultado</h2>
+        <p class="lede">Lo más valioso del diagnóstico: cruzar si acertó con qué tan seguro estaba.</p>
+        <div class="mx" role="table" aria-label="Seguridad por resultado">
+          <div class="h"></div><div class="h">Seguro</div><div class="h">Dudé</div><div class="h">Adiviné</div>
+          <div class="rl">Correctas</div><div class="k g">${matrix(true, "Seguro")}</div><div class="k w">${matrix(true, "Dudé")}</div><div class="k w">${matrix(true, "Adiviné")}</div>
+          <div class="rl">Incorrectas</div><div class="k b">${matrix(false, "Seguro")}</div><div class="k">${matrix(false, "Dudé")}</div><div class="k">${matrix(false, "Adiviné")}</div>
+        </div>
+        <div class="trio">
+          <div class="t"><b>${cw.length}</b>Correctas contestadas con duda<p>Conocimiento frágil.</p><div class="ids">${esc(idl(cw))}</div></div>
+          <div class="t"><b>${cg.length}</b>Correctas contestadas “Adiviné”<p>Acierto poco confiable.</p><div class="ids">${esc(idl(cg))}</div></div>
+          <div class="t"><b>${ws.length}</b>Incorrectas contestadas “Seguro”<p>Posible concepto erróneo.</p><div class="ids">${esc(idl(ws))}</div></div>
+        </div>
+        <p style="margin-top:18px;color:var(--muted)">Tiempo aproximado por pregunta: ${fmtClock(S.total / N)} en promedio. Las que más tiempo tomaron: ${an.slowest.map((i) => i.q.id + " (" + fmtClock(i.t) + ")").join(", ")}.</p>
+      </section>
+
+      <section class="blk" id="tablas"><h2>Tablas de detalle</h2>
+        <h3 style="margin:14px 0 10px">Por área</h3>
+        <div class="tablewrap"><table><thead><tr><th>Área</th><th class="n">Aciertos</th><th class="n">Total</th><th class="n">%</th><th>Nivel interno</th></tr></thead><tbody>
+          ${an.areas.map((a) => `<tr><td>${esc(a.name)}</td><td class="n">${a.c}</td><td class="n">${a.n}</td><td class="n">${a.pct.toFixed(1)}%</td><td>${chip(a.lvl.cls, a.lvl.txt)}</td></tr>`).join("")}
+        </tbody></table></div>
+        <h3 style="margin:26px 0 10px">Por tema de estudio</h3>
+        <div class="tablewrap"><table><thead><tr><th>Tema</th><th>Reactivos</th><th class="n">Aciertos</th><th class="n">Errores</th><th>Evidencia</th><th>Prioridad</th></tr></thead><tbody>${subRows(an.groups)}</tbody></table></div>
+        <h3 style="margin:26px 0 10px">Por subtema</h3>
+        <details class="rv"><summary><span class="rid">Ver los ${an.subs.length} subtemas</span><span class="rsub">Aciertos y errores de cada subtema, agrupados por sección.</span></summary>
+          <div class="rbody" style="padding:14px 0 0"><div class="tablewrap" style="border:0;border-radius:0"><table><thead><tr><th>Subtema</th><th>Reactivos</th><th class="n">Aciertos</th><th class="n">Errores</th><th>Evidencia</th><th>Prioridad</th></tr></thead><tbody>${subRows(an.subs)}</tbody></table></div></div></details>
+      </section>
+
+      <section class="blk" id="revisar"><h2>Reactivos para revisar con el tutor</h2>
+        <p class="lede">Aquí están todas las preguntas falladas y los aciertos frágiles, en orden de urgencia. Cada una muestra la respuesta del estudiante, la correcta y una explicación breve.</p>
+        <div class="actions" style="margin-top:0"><button class="btn small" data-act="expand">Abrir o cerrar todas</button></div>
+        ${an.cats.map((c) => `<div class="catlabel"><h3>${esc(c.t)} (${c.list.length})</h3></div><p style="color:var(--muted);margin:0 0 10px">${esc(c.h)}</p>${c.list.length ? c.list.map((i) => reviewCard(i, true)).join("") : `<p class="notice">Ninguna en esta categoría.</p>`}`).join("")}
+      </section>
+
+      <section class="blk" id="reporte"><h2>Reporte para el tutor</h2>
+        <p class="lede">Texto plano con puntajes, IDs incorrectos, respuestas, seguridad, subtemas, prioridades y el orden de estudio sugerido.</p>
+        <div class="actions"><button class="btn primary" data-act="share">Enviar reporte (WhatsApp u otra app)</button><button class="btn" data-act="copy">Copiar reporte para el tutor</button><button class="btn" data-act="download">Descargar reporte</button></div>
+        <details class="rv" id="repbox"><summary><span class="rid">Ver el reporte completo</span></summary><div class="rbody" style="padding-top:14px"><pre class="rep">${esc(buildReport(an))}</pre></div></details>
+      </section>
+      <div class="foot">Diagnóstico de estudio, no oficial. <button class="btn small ghost" data-act="reset">Iniciar un diagnóstico nuevo</button></div>
+    </main>`;
+  }
+
+  /* ---------- eventos ---------- */
+  app.addEventListener("change", (e) => {
+    const t = e.target; if (S.phase !== "exam") return;
+    if (t.name === "opt") setAns("opt", +t.value);
+    else if (t.name === "conf") setAns("conf", t.value);
+  });
+  document.addEventListener("click", (e) => {
+    const g = e.target.closest("[data-go]"); if (g) { goTo(+g.getAttribute("data-go")); return; }
+    const b = e.target.closest("[data-act]"), id = e.target.closest("#prev,#next,#flag");
+    if (id && S.phase === "exam") {
+      if (id.id === "prev" && S.idx > 0) { S.idx--; save(); render(); }
+      else if (id.id === "next") { if (S.idx < N - 1) { S.idx++; save(); render(); } else { S.phase = "review"; save(); render(); } }
+      else if (id.id === "flag") { const q = Q[S.idx]; if (S.flags[q.id]) delete S.flags[q.id]; else S.flags[q.id] = 1; save(); refreshExam(); }
+      return;
+    }
+    if (!b) return;
+    const a = b.getAttribute("data-act");
+    if (a === "map") { S.phase = "review"; save(); render(); }
+    else if (a === "submit") {
+      if (Q.some((q) => !isComplete(q))) return;
+      modal("¿Enviar el diagnóstico?", `<p>Después del envío ya no podrás cambiar tus respuestas. Se mostrarán tus resultados y el reporte.</p>`, "Sí, enviar", () => { S.phase = "results"; S.finishedAt = Date.now(); save(); render(); });
+    }
+    else if (a === "copy") copyReport();
+    else if (a === "share") shareReport();
+    else if (a === "download") downloadReport();
+    else if (a === "expand") { const all = $$("#revisar details.rv"), open = all.some((d) => !d.open); all.forEach((d) => (d.open = open)); }
+    else if (a === "reset") modal("¿Iniciar un diagnóstico nuevo?", `<p>Se borrarán las respuestas y el resultado actuales de este navegador. Antes de continuar, copia o descarga el reporte si lo necesitas.</p>`, "Borrar y empezar de nuevo", () => { try { localStorage.removeItem(KEY); } catch (er) {} try { window.name = ""; } catch (er) {} S = fresh(); render(); }, true);
+  });
+
+  render(false);
+})();
+
+</script>
+</body>
+</html>
